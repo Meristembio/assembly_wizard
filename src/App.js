@@ -7,7 +7,8 @@ const defaultState = {
         level: 'odd',
         receiver: null,
         inserts: [],
-        complete: false
+        complete: false,
+        name: ''
     }
 
 const parts = [
@@ -139,7 +140,7 @@ class ReceiverRender extends React.Component {
             <td>
                 <button
                     type="button"
-                    class="btn btn-outline-secondary"
+                    className="btn btn-outline-secondary"
                     value={part.id}
                     onClick={this.props.setReceiverHandler}>
                     Set
@@ -154,7 +155,7 @@ class LevelRender extends React.Component {
         let button_class = "btn btn-outline-secondary"
         if(this.props.active) button_class = "btn btn-secondary"
 
-        return <button type="button" className={button_class} name={"level-" + this.props.value} value={this.props.value} onClick={this.props.setLevelHandler}>{this.props.name}</button>
+        return <button type="button" style={{'margin-right': '.5rem'}} className={button_class} name={"level-" + this.props.value} value={this.props.value} onClick={this.props.setLevelHandler}>{this.props.name}</button>
     }
 }
 
@@ -167,7 +168,7 @@ class PartSelector extends React.Component {
         if(config.level){
             let receiver_output = []
             let receivers = []
-            receiver_output.push(<h3>Receiver</h3>)
+            receiver_output.push(<h2>Receiver</h2>)
             parts.forEach((part) => {
                 if(
                 (('0' === config.level && part.level === 0) || ('odd' === config.level && part.level%2 === 1) || ('even' === config.level && part.level%2 === 0 && part.level !== 0))
@@ -178,7 +179,7 @@ class PartSelector extends React.Component {
                     receivers.push(<ReceiverRender part={part} active={active} config={config} setReceiverHandler={this.props.setReceiverHandler} />)
                 }
             })
-            receiver_output.push(<table class="table">
+            receiver_output.push(<table className="table">
                 <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -192,7 +193,7 @@ class PartSelector extends React.Component {
 
             let inserts_output = []
             let inserts = []
-            inserts_output.push(<h3>Parts</h3>)
+            inserts_output.push(<h2>Parts</h2>)
             inserts_output.push(<div>Only compatible parts are listed</div>)
 
             if(config.receiver && !config.complete){
@@ -209,7 +210,7 @@ class PartSelector extends React.Component {
                         inserts.push(<InsertRender part={part} addPartHandler={this.props.addPartHandler} />)
                     }
                 })
-                inserts_output.push(<table class="table">
+                inserts_output.push(<table className="table">
                     <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -254,7 +255,7 @@ class PartSelector extends React.Component {
         return <div>
             <h3>Level</h3>
             <div>
-                {levels_output}
+                <p>{levels_output}</p>
             </div>
             {receiver_parts_output}
         </div>
@@ -305,8 +306,23 @@ class AssemblyResult extends React.Component {
 }
 
 class PlasmidMap extends React.Component {
+    constructor(props){
+        super(props)
+        this.state = {
+            canvas_size: 800
+        }
+        this.theIframe = React.createRef()
+    }
+
+    componentDidMount () {
+        this.setState({
+            canvas_size: this.theIframe.current.offsetWidth
+        })
+    }
+
     render() {
         const config = this.props.config
+
         if(config.receiver){
             let length = config.receiver.len
             let insert_trackmarkers = []
@@ -337,17 +353,23 @@ class PlasmidMap extends React.Component {
                 })
             }
 
+            let plasmid_name = this.props.name
+            if(!plasmid_name) plasmid_name = "Set plasmid name"
+
+            let canvas_size = this.state.canvas_size
+            if(canvas_size > 600) canvas_size = 600
+
             let html = ReactDOMServer.renderToString(
                 <html>
                 <head>
                     <title>Plasmid Map</title>
                     <script src='./external/angularplasmid.complete.min.js'></script>
                 </head>
-                <body>
-                <plasmid id='p1' sequencelength={length} plasmidwidth="800"  plasmidheight="800">
-                    <plasmidtrack width="5" trackstyle='fill:#ccc;' radius="260"></plasmidtrack>
-                    <plasmidtrack trackstyle='fill:rgba(225,225,225,0.5);' radius="250">
-                        <tracklabel labelstyle="font-size:20px;font-weight:600;fill:#666;" text="Assembled plasmid"></tracklabel>
+                <body style={{'width':'100%', 'overflow': 'hidden', 'text-align': 'center'}}>
+                <plasmid id='p1' sequencelength={length} plasmidwidth={canvas_size + 50}  plasmidheight={canvas_size + 100}>
+                    <plasmidtrack width="5" trackstyle='fill:#ccc;' radius={canvas_size/2 - 40}></plasmidtrack>
+                    <plasmidtrack trackstyle='fill:rgba(225,225,225,0.5);' radius={canvas_size/2 - 50}>
+                        <tracklabel labelstyle="font-size:20px;font-weight:600;fill:#666;" text={plasmid_name}></tracklabel>
                         <tracklabel labelstyle="font-size:12px;font-weight:200;fill:#999;" text={length + " bp"} vadjust="18"></tracklabel>
                         <trackscale className='smajor' style={{'stroke-width': 1, stroke:"#888"}} ticksize='4' interval={200} labelstyle="font-size:9px;fill:#666" labelvadjust="15" showlabels='1' labelclass='sml'></trackscale>
                         <trackmarker start={length-config.receiver.len} end={length} markerstyle="fill:transparent">
@@ -360,12 +382,12 @@ class PlasmidMap extends React.Component {
                 </html>
             )
             const iframe = ReactDOMServer.renderToString(
-                <iframe title="Plasmid Map" width="100%" height="500px" srcDoc={html}></iframe>
+                <iframe title="Plasmid Map" width="100%" height={canvas_size + 100} srcDoc={html}></iframe>
             )
-            return <div dangerouslySetInnerHTML={{__html: iframe}}></div>
+            return <div ref={this.theIframe} dangerouslySetInnerHTML={{__html: iframe}}></div>
         }
 
-        return <div className="alert alert-info">Set a backbone to generate the plasmid map</div>
+        return <div ref={this.theIframe} className="alert alert-info">Set a backbone to generate the plasmid map</div>
     }
 }
 
@@ -373,6 +395,11 @@ class App extends React.Component {
     constructor(props) {
         super(props)
         this.state = defaultState
+    }
+    setName = (event) => {
+        this.setState({
+            name: event.target.value
+        })
     }
     removeLastPartHandler = (event) => {
         let inserts = this.state.inserts
@@ -437,13 +464,19 @@ class App extends React.Component {
                 <h1>Assembly Wizzard</h1>
                 <div className="row">
                     <div className="col-8">
+                        <h2>Name</h2>
+                        <p><input type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
                         <PartSelector config={this.state} setLevelHandler={this.setLevelHandler} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
-                        <h2>Plasmid Map</h2>
-                        <PlasmidMap config={this.state} />
                     </div>
                     <div className="col-4">
                         <h2>Assembly</h2>
                         <AssemblyResult config={this.state} removeLastPartHandler={this.removeLastPartHandler} />
+                    </div>
+                </div>
+                <div className="row">
+                    <div className="col-12">
+                        <h2>Map</h2>
+                        <PlasmidMap config={this.state} name={this.state.name} />
                     </div>
                 </div>
             </div>
