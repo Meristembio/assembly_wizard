@@ -4,68 +4,18 @@ import LoopOHS from './components/LoopOHS';
 import * as ReactDOMServer from 'react-dom/server';
 
 const defaultState = {
-        level: 'odd',
+        level: null,
         receiver: null,
         inserts: [],
         complete: false,
-        name: ''
+        name: '',
+        next_url: '',
+        loaded: false,
+        parts: null
     }
 
-const parts = [
-    {
-        id: '0',
-        name: 'pL0R-mRFP1',
-        oh3: 'TCC',
-        oh5: 'CGA',
-        level: 0,
-        type: 'r',
-        len: 2021
-    },
-    {
-        id: '1',
-        name: 'pCAodd-1',
-        oh3: 'GGAG',
-        oh5: 'CGCT',
-        level: 1,
-        type: 'r',
-        len: 2021
-    },
-    {
-        id: '2',
-        name: 'pCAodd-2',
-        oh3: 'GGAG',
-        oh5: 'CGCT',
-        level: 1,
-        type: 'r',
-        len: 2021
-    },
-    {
-        id: '10',
-        name: 'AC-J23101',
-        oh5: 'GGAG',
-        oh3: 'AATG',
-        level: 0,
-        type: 'i',
-        len: 35
-    },
-    {
-        id: '11',
-        name: 'AC-J23118',
-        oh5: 'GGAG',
-        oh3: 'AATG',
-        level: 0,
-        type: 'i',
-        len: 36
-    },
-    {
-        id: '12',
-        name: 'CE-GFP',
-        oh5: 'AATG',
-        oh3: 'GCTT',
-        level: 0,
-        type: 'i',
-        len: 714
-    },
+/*
+Part format
     {
         id: '13',
         name: 'EF-B0015',
@@ -75,7 +25,7 @@ const parts = [
         type: 'i',
         len: 60
     }
-]
+*/
 
 function OHRender(ohSeq) {
     let result = "Custom: " + ohSeq
@@ -155,7 +105,7 @@ class LevelRender extends React.Component {
         let button_class = "btn btn-outline-secondary"
         if(this.props.active) button_class = "btn btn-secondary"
 
-        return <button type="button" style={{'margin-right': '.5rem'}} className={button_class} name={"level-" + this.props.value} value={this.props.value} onClick={this.props.setLevelHandler}>{this.props.name}</button>
+        return <button type="button" style={{'marginRight': '.5rem'}} className={button_class} name={"level-" + this.props.value} value={this.props.value} onClick={this.props.setLevelHandler}>{this.props.name}</button>
     }
 }
 
@@ -169,10 +119,17 @@ class PartSelector extends React.Component {
             let receiver_output = []
             let receivers = []
             receiver_output.push(<h2>Receiver</h2>)
-            parts.forEach((part) => {
+            /*
+            From intranet
+            TYPES = (
+                (0, 'Part'),
+                (1, 'Receiver'),
+             */
+
+            config.parts.forEach((part) => {
                 if(
                 (('0' === config.level && part.level === 0) || ('odd' === config.level && part.level%2 === 1) || ('even' === config.level && part.level%2 === 0 && part.level !== 0))
-                && part.type === 'r'
+                && part.type === 1
                 ){
                 let active = false
                 if(part === config.receiver) active = true
@@ -193,18 +150,20 @@ class PartSelector extends React.Component {
 
             let inserts_output = []
             let inserts = []
-            inserts_output.push(<h2>Parts</h2>)
-            inserts_output.push(<div>Only compatible parts are listed</div>)
+            inserts_output.push(<h2>Inserts</h2>)
+            inserts_output.push(<div>Only compatible inserts are listed</div>)
+
+            //console.log(config.parts)
 
             if(config.receiver && !config.complete){
                 let last_part_added = config.receiver
                 if(config.inserts.length){
                     last_part_added = config.inserts[config.inserts.length - 1]
                 }
-                parts.forEach((part) => {
+                config.parts.forEach((part) => {
                     if(
                     (('odd' === config.level && part.level%2 === 0) || ('even' === config.level && part.level%2 === 1))
-                    && part.type === 'i'
+                    && part.type === 0
                     && last_part_added.oh3 === part.oh5
                     ){
                         inserts.push(<InsertRender part={part} addPartHandler={this.props.addPartHandler} />)
@@ -284,7 +243,7 @@ class AssemblyResult extends React.Component {
                 config.inserts.forEach((insert) => {
                     inserts_output.push(<PartRenderAssembly part={insert} />)
                 })
-                inserts_output.push(<button type="button" className="btn btn-outline-danger" onClick={this.props.removeLastPartHandler}>Remove last insert</button>)
+                inserts_output.push(<p><button type="button" className="btn btn-outline-danger" onClick={this.props.removeLastPartHandler}>Remove last insert</button></p>)
             }
         } else {
             complete_assembly = ""
@@ -363,15 +322,15 @@ class PlasmidMap extends React.Component {
                 <html>
                 <head>
                     <title>Plasmid Map</title>
-                    <script src='./external/angularplasmid.complete.min.js'></script>
+                    <script src='/static/js/angularplasmid.complete.min.js'></script>
                 </head>
-                <body style={{'width':'100%', 'overflow': 'hidden', 'text-align': 'center'}}>
+                <body style={{'width':'100%', 'overflow': 'hidden', 'textAlign': 'center'}}>
                 <plasmid id='p1' sequencelength={length} plasmidwidth={canvas_size + 50}  plasmidheight={canvas_size + 100}>
                     <plasmidtrack width="5" trackstyle='fill:#ccc;' radius={canvas_size/2 - 40}></plasmidtrack>
                     <plasmidtrack trackstyle='fill:rgba(225,225,225,0.5);' radius={canvas_size/2 - 50}>
                         <tracklabel labelstyle="font-size:20px;font-weight:600;fill:#666;" text={plasmid_name}></tracklabel>
                         <tracklabel labelstyle="font-size:12px;font-weight:200;fill:#999;" text={length + " bp"} vadjust="18"></tracklabel>
-                        <trackscale className='smajor' style={{'stroke-width': 1, stroke:"#888"}} ticksize='4' interval={200} labelstyle="font-size:9px;fill:#666" labelvadjust="15" showlabels='1' labelclass='sml'></trackscale>
+                        <trackscale className='smajor' style={{'strokeWidth': 1, stroke:"#888"}} ticksize='4' interval={200} labelstyle="font-size:9px;fill:#666" labelvadjust="15" showlabels='1' labelclass='sml'></trackscale>
                         <trackmarker start={length-config.receiver.len} end={length} markerstyle="fill:transparent">
                             <markerlabel vadjust="50" type="path" labelstyle="font-size:12px;fill:#888;font-weight:400" text={"Backbone: " + config.receiver.name}></markerlabel>
                         </trackmarker>
@@ -413,7 +372,7 @@ class App extends React.Component {
     addPartHandler = (event) => {
         let inserts = this.state.inserts
         let newPart = null
-        parts.forEach((part) => {
+        this.state.parts.forEach((part) => {
             if(part.id === event.target.value){
                 newPart = part
             }
@@ -431,7 +390,7 @@ class App extends React.Component {
     }
     setReceiverHandler = (event) => {
         let receiver = null
-        parts.forEach((part) => {
+        this.state.parts.forEach((part) => {
             if(part.id === event.target.value){
                 receiver = part
             }
@@ -458,26 +417,73 @@ class App extends React.Component {
         }
     }
 
+    componentDidMount(){
+        const axios = require('axios');
+        //const url = 'http://192.168.1.64:8000/inventory/api/parts/'
+        const url = '/inventory/api/parts'
+        axios.get(url)
+            .then((response) => {
+                this.setState({
+                    parts: response.data.parts,
+                    next_url: response.data.next_url,
+                    loaded: true
+                })
+            })
+    }
+
     render () {
-        return <div id="assembly_wizzard">
-            <div className="container">
-                <h1>Assembly Wizzard</h1>
-                <div className="row">
-                    <div className="col-8">
-                        <h2>Name</h2>
-                        <p><input type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
-                        <PartSelector config={this.state} setLevelHandler={this.setLevelHandler} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
+        let output = <div className="alert alert-info">
+            <div className="spinner-grow spinner-grow-sm" role="status">
+                <span className="visually-hidden">...</span>
+            </div> Loading parts
+        </div>
+        if(this.state.loaded){
+            let disabled = 'disabled'
+            let next_step_text = "End assembly to continue"
+            if(this.state.complete) {
+                disabled = ''
+                next_step_text = "Next step"
+            }
+
+            let get_params = "n=" + this.state.name
+            if(this.state.receiver)
+                get_params += "&b=" + this.state.receiver.id
+            if(this.state.inserts.length) {
+                get_params += "&i="
+                this.state.inserts.forEach((insert) => {
+                    get_params += insert.id + "+"
+                })
+            }
+            output = <div id="assembly_wizzard-main">
+                    <div className="row">
+                        <div className="col-8">
+                            <h2>Name</h2>
+                            <p><input type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
+                            <PartSelector config={this.state} setLevelHandler={this.setLevelHandler} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
+                        </div>
+                        <div className="col-4">
+                            <h2>Next</h2>
+                            <p>
+                                <a href={this.state.next_url + "?" + get_params} style={{"marginRight": "0.5em"}} className={"btn btn-outline-primary " + disabled}>{next_step_text}</a>
+                                <a href={this.state.next_url} className="btn btn-outline-secondary">Skip wizzard</a>
+                            </p>
+                            <h2>Assembly</h2>
+                            <AssemblyResult config={this.state} removeLastPartHandler={this.removeLastPartHandler} />
+                        </div>
                     </div>
-                    <div className="col-4">
-                        <h2>Assembly</h2>
-                        <AssemblyResult config={this.state} removeLastPartHandler={this.removeLastPartHandler} />
+                    <div className="row">
+                        <div className="col-12">
+                            <h2>Map</h2>
+                            <PlasmidMap config={this.state} name={this.state.name} />
+                        </div>
                     </div>
                 </div>
+        }
+
+        return <div id="assembly_wizzard">
+            <div className="container">
                 <div className="row">
-                    <div className="col-12">
-                        <h2>Map</h2>
-                        <PlasmidMap config={this.state} name={this.state.name} />
-                    </div>
+                    {output}
                 </div>
             </div>
         </div>
