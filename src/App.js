@@ -1,6 +1,6 @@
 import React from 'react';
 import './assembly_wizzard.css';
-import LoopOHS from './components/LoopOHS';
+import AssemblyStandards from './components/AssemblyStandards';
 import * as ReactDOMServer from 'react-dom/server';
 
 const defaultState = {
@@ -11,7 +11,8 @@ const defaultState = {
         name: '',
         next_url: '',
         loaded: false,
-        parts: null
+        parts: null,
+        oh_standard: 'loop'
     }
 
 /*
@@ -27,11 +28,12 @@ Part format
     }
 */
 
-function OHRender(ohSeq) {
+function OHRender(ohSeq, oh_standard) {
     let result = "Custom: " + ohSeq
-    for(var key in LoopOHS) {
-        if(LoopOHS[key].oh === ohSeq){
-            result = LoopOHS[key].name + ": " + ohSeq
+    const standardOHS = AssemblyStandards[oh_standard].ohs
+    for(var key in standardOHS) {
+        if(standardOHS[key].oh === ohSeq){
+            result = standardOHS[key].name + ": " + ohSeq
         }
     }
     return result
@@ -42,7 +44,8 @@ class PartRenderAssembly extends React.Component {
         const part = this.props.part
 
         return <div className="alert border border-secondary">
-            <strong>{part.name}</strong>    <span className="text-muted">{part.oh5} / {part.oh3}</span>
+            <strong>{part.name}</strong> <a href={"/inventory/plasmid/" + part.id} target="_blank" rel="noreferrer"><i
+            className="bi bi-box-arrow-up-right"></i></a>    <span className="text-muted">{part.oh5} / {part.oh3}</span>
         </div>
     }
 }
@@ -57,9 +60,10 @@ class InsertRender extends React.Component {
         }
 
         return <tr className={className}>
-            <td>{part.name}</td>
-            <td>{OHRender(part.oh5)}</td>
-            <td>{OHRender(part.oh3)}</td>
+            <td>{part.name} <a href={"/inventory/plasmid/" + part.id} target="_blank" rel="noreferrer"><i
+                className="bi bi-box-arrow-up-right"></i></a></td>
+            <td>{OHRender(part.oh5, this.props.oh_standard)}</td>
+            <td>{OHRender(part.oh3, this.props.oh_standard)}</td>
             <td>
                 <button
                     type="button"
@@ -84,9 +88,9 @@ class ReceiverRender extends React.Component {
         }
 
         return <tr className={className}>
-            <td>{part.name}</td>
-            <td>{OHRender(part.oh3)}</td>
-            <td>{OHRender(part.oh5)}</td>
+            <td>{part.name} <a href={"/inventory/plasmid/" + part.id} target="_blank" rel="noreferrer"><i class="bi bi-box-arrow-up-right"></i></a></td>
+            <td>{OHRender(part.oh3, this.props.oh_standard)}</td>
+            <td>{OHRender(part.oh5, this.props.oh_standard)}</td>
             <td>
                 <button
                     type="button"
@@ -105,11 +109,52 @@ class LevelRender extends React.Component {
         let button_class = "btn btn-outline-secondary"
         if(this.props.active) button_class = "btn btn-secondary"
 
-        return <button type="button" style={{'marginRight': '.5rem'}} className={button_class} name={"level-" + this.props.value} value={this.props.value} onClick={this.props.setLevelHandler}>{this.props.name}</button>
+        return <button type="button" className={button_class + " aw-button-mr"} name={"level-" + this.props.value} value={this.props.value} onClick={this.props.setLevelHandler}>{this.props.name}</button>
+    }
+}
+
+class TableFilter extends React.Component {
+    render() {
+        return <div className="col-md-4">
+            <div className="input-group">
+                <input value={this.props.text} className="form-control" placeholder="Filter ..." onChange={this.props.filterHandler} />
+                <button onClick={this.props.filterClearHandler} type="button" className="btn bg-transparent">
+                    <i className="bi bi-x-circle"></i>
+                </button>
+            </div>
+            <p></p>
+        </div>
     }
 }
 
 class PartSelector extends React.Component {
+    constructor(props){
+        super(props)
+        this.state = {
+            receiverFilter: '',
+            insertFilter: ''
+        }
+    }
+    filterReceiverHandler = (event) => {
+        this.setState({
+            receiverFilter: event.target.value,
+        })
+    }
+    filteriInsertHandler = (event) => {
+        this.setState({
+            insertFilter: event.target.value,
+        })
+    }
+    filterReceiverClearHandler = (event) => {
+        this.setState({
+            receiverFilter: "",
+        })
+    }
+    filteriInsertClearHandler = (event) => {
+        this.setState({
+            insertFilter: "",
+        })
+    }
     render() {
         const config = this.props.config
         let receiver_parts_output = <div>
@@ -130,13 +175,16 @@ class PartSelector extends React.Component {
                 if(
                 (('0' === config.level && part.level === 0) || ('odd' === config.level && part.level%2 === 1) || ('even' === config.level && part.level%2 === 0 && part.level !== 0))
                 && part.type === 1
+                && part.name.toLowerCase().includes(this.state.receiverFilter.toLowerCase())
                 ){
                 let active = false
                 if(part === config.receiver) active = true
-                    receivers.push(<ReceiverRender part={part} active={active} config={config} setReceiverHandler={this.props.setReceiverHandler} />)
+                    receivers.push(<ReceiverRender oh_standard={config.oh_standard} part={part} active={active} config={config} setReceiverHandler={this.props.setReceiverHandler} />)
                 }
             })
-            receiver_output.push(<table className="table">
+            receiver_output.push(<div className="aw_part_table">
+                <TableFilter text={this.state.receiverFilter} filterClearHandler={this.filterReceiverClearHandler} filterHandler={this.filterReceiverHandler} />
+                <table className="table">
                 <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -146,7 +194,8 @@ class PartSelector extends React.Component {
                     </tr>
                 </thead>
                 <tbody>{receivers}</tbody>
-            </table>)
+            </table>
+            </div>)
 
             let inserts_output = []
             let inserts = []
@@ -165,11 +214,14 @@ class PartSelector extends React.Component {
                     (('odd' === config.level && part.level%2 === 0) || ('even' === config.level && part.level%2 === 1))
                     && part.type === 0
                     && last_part_added.oh3 === part.oh5
+                    && part.name.toLowerCase().includes(this.state.insertFilter.toLowerCase())
                     ){
-                        inserts.push(<InsertRender part={part} addPartHandler={this.props.addPartHandler} />)
+                        inserts.push(<InsertRender oh_standard={config.oh_standard} part={part} addPartHandler={this.props.addPartHandler} />)
                     }
                 })
-                inserts_output.push(<table className="table">
+                inserts_output.push(<div className="aw_part_table">
+                    <TableFilter text={this.state.insertFilter} filterClearHandler={this.filteriInsertClearHandler} filterHandler={this.filteriInsertHandler} />
+                    <table className="table">
                     <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -179,7 +231,8 @@ class PartSelector extends React.Component {
                     </tr>
                     </thead>
                     <tbody>{inserts}</tbody>
-                </table>)
+                </table>
+                </div>)
             } else {
                 if(config.complete){
                     inserts_output.push(<div className="alert alert-success">Assembly completed</div>)
@@ -197,25 +250,7 @@ class PartSelector extends React.Component {
                 </div>
             </div>
         }
-        let levels_data = [
-            {
-                value: 'odd'
-            },
-            {
-                value: 'even'
-            },
-        ]
-        const levels_output = []
-        levels_data.forEach((level_data) => {
-            let active = false
-            if(level_data.value === config.level) active = true
-            levels_output.push(<LevelRender name={"Level " + level_data.value} value={level_data.value} active={active} setLevelHandler = {this.props.setLevelHandler} />)
-        })
         return <div>
-            <h3>Level</h3>
-            <div>
-                <p>{levels_output}</p>
-            </div>
             {receiver_parts_output}
         </div>
     }
@@ -226,8 +261,8 @@ class AssemblyResult extends React.Component {
         const config = this.props.config
         const receiver = config.receiver
 
-        let receiver_output = <div className="alert alert-info">Choose a receiver</div>
-        let complete_assembly = <div className="alert alert-info">Add parts to complete the assembly</div>
+        let receiver_output = <div className="alert alert-warning">Choose a receiver</div>
+        let complete_assembly = <div className="alert alert-warning">Add parts to complete the assembly</div>
         let inserts_output = <div className="alert alert-info">No inserts selected</div>
 
         if(receiver) {
@@ -355,6 +390,11 @@ class App extends React.Component {
         super(props)
         this.state = defaultState
     }
+    setStandardHandler = (event) => {
+        this.setState({
+            oh_standard: event.target.value
+        })
+    }
     setName = (event) => {
         this.setState({
             name: event.target.value
@@ -454,17 +494,56 @@ class App extends React.Component {
                     get_params += insert.id + "+"
                 })
             }
+            let levels_data = [
+                {
+                    value: 'odd'
+                },
+                {
+                    value: 'even'
+                },
+            ]
+            const levels_output = []
+            levels_data.forEach((level_data) => {
+                let active = false
+                if(level_data.value === this.state.level) active = true
+                levels_output.push(<LevelRender name={"Level " + level_data.value} value={level_data.value} active={active} setLevelHandler = {this.setLevelHandler} />)
+            })
+            const oh_standards_options = []
+            for(const [key, value] of Object.entries(AssemblyStandards)){
+                let selected = false
+                if(this.state.oh_standard === key) selected = true
+                oh_standards_options.push(<option selected={selected} value={key}>{value.name}</option>)
+            }
+
             output = <div id="assembly_wizzard-main">
                     <div className="row">
                         <div className="col-8">
-                            <h2>Name</h2>
-                            <p><input type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
-                            <PartSelector config={this.state} setLevelHandler={this.setLevelHandler} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
+                            <div className="row">
+                                <div className="col-4">
+                                    <h2>Name</h2>
+                                    <p><input className="form-control" type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
+                                </div>
+                                <div className="col-4">
+                                    <h3>Level</h3>
+                                    <div>
+                                        <p>{levels_output}</p>
+                                    </div>
+                                </div>
+                                <div className="col-4">
+                                    <h3>OH Standard</h3>
+                                    <div>
+                                        <select onChange={this.setStandardHandler} className="form-select">
+                                            {oh_standards_options}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <PartSelector config={this.state} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
                         </div>
                         <div className="col-4">
                             <h2>Next</h2>
                             <p>
-                                <a href={this.state.next_url + "?" + get_params} style={{"marginRight": "0.5em"}} className={"btn btn-outline-primary " + disabled}>{next_step_text}</a>
+                                <a href={this.state.next_url + "?" + get_params} className={"aw-button-mr btn btn-outline-primary " + disabled}>{next_step_text}</a>
                                 <a href={this.state.next_url} className="btn btn-outline-secondary">Skip wizzard</a>
                             </p>
                             <h2>Assembly</h2>
