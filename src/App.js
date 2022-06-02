@@ -4,15 +4,16 @@ import AssemblyStandards from './components/AssemblyStandards';
 import * as ReactDOMServer from 'react-dom/server';
 
 const defaultState = {
-        level: null,
+        enzyme: null,
         receiver: null,
         inserts: [],
         complete: false,
         name: '',
         next_url: '',
-        loaded: false,
+        loading: false,
         parts: null,
-        oh_standard: 'loop'
+        assembly_standard: 'loop',
+        apiError: ''
     }
 
 /*
@@ -22,15 +23,15 @@ Part format
         name: 'EF-B0015',
         oh5: 'GCTT',
         oh3: 'CGCT',
-        level: 0,
+        enzyme: 0,
         type: 'i',
         len: 60
     }
 */
 
-function OHRender(ohSeq, oh_standard) {
+function OHRender(ohSeq, assembly_standard) {
     let result = "Custom: " + ohSeq
-    const standardOHS = AssemblyStandards[oh_standard].ohs
+    const standardOHS = AssemblyStandards[assembly_standard].ohs
     for(var key in standardOHS) {
         if(standardOHS[key].oh === ohSeq){
             result = standardOHS[key].name + ": " + ohSeq
@@ -44,8 +45,9 @@ class PartRenderAssembly extends React.Component {
         const part = this.props.part
 
         return <div className="alert border border-secondary">
-            <strong>{part.name}</strong> <a href={"/inventory/plasmid/" + part.id} target="_blank" rel="noreferrer"><i
-            className="bi bi-box-arrow-up-right"></i></a>    <span className="text-muted">{part.oh5} / {part.oh3}</span>
+            <p className="mb-0"><strong>{part.n}</strong> <a href={"/inventory/plasmid/" + part.i} target="_blank" rel="noreferrer"><i
+            className="bi bi-box-arrow-up-right"></i></a></p>
+            <p className="mb-0"><span className="text-muted">{OHRender(part.o5, this.props.assembly_standard)} / {OHRender(part.o3, this.props.assembly_standard)}</span></p>
         </div>
     }
 }
@@ -60,15 +62,15 @@ class InsertRender extends React.Component {
         }
 
         return <tr className={className}>
-            <td>{part.name} <a href={"/inventory/plasmid/" + part.id} target="_blank" rel="noreferrer"><i
+            <td>{part.n} <a href={"/inventory/plasmid/" + part.i} target="_blank" rel="noreferrer"><i
                 className="bi bi-box-arrow-up-right"></i></a></td>
-            <td>{OHRender(part.oh5, this.props.oh_standard)}</td>
-            <td>{OHRender(part.oh3, this.props.oh_standard)}</td>
+            <td>{OHRender(part.o5, this.props.assembly_standard)}</td>
+            <td>{OHRender(part.o3, this.props.assembly_standard)}</td>
             <td>
                 <button
                     type="button"
                     className="btn btn-outline-secondary"
-                    value={part.id}
+                    value={part.i}
                     onClick={this.props.addPartHandler}>
                     Add
                 </button>
@@ -88,14 +90,14 @@ class ReceiverRender extends React.Component {
         }
 
         return <tr className={className}>
-            <td>{part.name} <a href={"/inventory/plasmid/" + part.id} target="_blank" rel="noreferrer"><i class="bi bi-box-arrow-up-right"></i></a></td>
-            <td>{OHRender(part.oh3, this.props.oh_standard)}</td>
-            <td>{OHRender(part.oh5, this.props.oh_standard)}</td>
+            <td>{part.n} <a href={"/inventory/plasmid/" + part.i} target="_blank" rel="noreferrer"><i class="bi bi-box-arrow-up-right"></i></a></td>
+            <td>{OHRender(part.o3, this.props.assembly_standard)}</td>
+            <td>{OHRender(part.o5, this.props.assembly_standard)}</td>
             <td>
                 <button
                     type="button"
                     className="btn btn-outline-secondary"
-                    value={part.id}
+                    value={part.i}
                     onClick={this.props.setReceiverHandler}>
                     Set
                 </button>
@@ -104,12 +106,12 @@ class ReceiverRender extends React.Component {
     }
 }
 
-class LevelRender extends React.Component {
+class EnzymeRender extends React.Component {
     render() {
         let button_class = "btn btn-outline-secondary"
         if(this.props.active) button_class = "btn btn-secondary"
 
-        return <button type="button" className={button_class + " aw-button-mr"} name={"level-" + this.props.value} value={this.props.value} onClick={this.props.setLevelHandler}>{this.props.name}</button>
+        return <button type="button" className={button_class + " aw-button-mr"} name={"enzyme-" + this.props.value} value={this.props.value} onClick={this.props.setEnzymeHandler}>{this.props.name}</button>
     }
 }
 
@@ -135,6 +137,12 @@ class PartSelector extends React.Component {
             insertFilter: ''
         }
     }
+    addInsertHandler = (event) => {
+        this.setState({
+            insertFilter: "",
+        })
+        this.props.addPartHandler(event)
+    }
     filterReceiverHandler = (event) => {
         this.setState({
             receiverFilter: event.target.value,
@@ -158,9 +166,10 @@ class PartSelector extends React.Component {
     render() {
         const config = this.props.config
         let receiver_parts_output = <div>
-            <p>Please selet a level to continue</p>
+            <h2>Receiver</h2>
+            <p className="alert alert-info">Set select an enzyme to show options</p>
         </div>
-        if(config.level){
+        if(config.enzyme && config.parts){
             let receiver_output = []
             let receivers = []
             receiver_output.push(<h2>Receiver</h2>)
@@ -172,35 +181,36 @@ class PartSelector extends React.Component {
              */
 
             config.parts.forEach((part) => {
-                if(
-                (('0' === config.level && part.level === 0) || ('odd' === config.level && part.level%2 === 1) || ('even' === config.level && part.level%2 === 0 && part.level !== 0))
-                && part.type === 1
-                && part.name.toLowerCase().includes(this.state.receiverFilter.toLowerCase())
-                ){
-                let active = false
-                if(part === config.receiver) active = true
-                    receivers.push(<ReceiverRender oh_standard={config.oh_standard} part={part} active={active} config={config} setReceiverHandler={this.props.setReceiverHandler} />)
+                if(part.t === 1 && part.n.toLowerCase().includes(this.state.receiverFilter.toLowerCase())){
+                    let active = false
+                    if(part === config.receiver) active = true
+                        receivers.push(<ReceiverRender assembly_standard={config.assembly_standard} part={part} active={active} config={config} setReceiverHandler={this.props.setReceiverHandler} />)
                 }
             })
-            receiver_output.push(<div className="aw_part_table">
-                <TableFilter text={this.state.receiverFilter} filterClearHandler={this.filterReceiverClearHandler} filterHandler={this.filterReceiverHandler} />
-                <table className="table">
-                <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">OH 5</th>
-                        <th scope="col">OH 3</th>
-                        <th scope="col">Set</th>
-                    </tr>
-                </thead>
-                <tbody>{receivers}</tbody>
-            </table>
-            </div>)
+            if(receivers.length)
+                receiver_output.push(<div className="aw_part_table mb-4">
+                    <TableFilter text={this.state.receiverFilter} filterClearHandler={this.filterReceiverClearHandler} filterHandler={this.filterReceiverHandler} />
+                    <div className="aw_table_container">
+                        <table className="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">OH 5</th>
+                                <th scope="col">OH 3</th>
+                                <th scope="col">Set</th>
+                            </tr>
+                        </thead>
+                        <tbody>{receivers}</tbody>
+                    </table>
+                    </div>
+                </div>)
+            else
+                receiver_output.push(<div className="alert alert-danger">No receivers found</div>)
 
             let inserts_output = []
             let inserts = []
             inserts_output.push(<h2>Inserts</h2>)
-            inserts_output.push(<div>Only compatible inserts are listed</div>)
+            inserts_output.push(<p className="fs-6">Only compatible inserts are listed</p>)
 
             //console.log(config.parts)
 
@@ -210,34 +220,35 @@ class PartSelector extends React.Component {
                     last_part_added = config.inserts[config.inserts.length - 1]
                 }
                 config.parts.forEach((part) => {
-                    if(
-                    (('odd' === config.level && part.level%2 === 0) || ('even' === config.level && part.level%2 === 1))
-                    && part.type === 0
-                    && last_part_added.oh3 === part.oh5
-                    && part.name.toLowerCase().includes(this.state.insertFilter.toLowerCase())
-                    ){
-                        inserts.push(<InsertRender oh_standard={config.oh_standard} part={part} addPartHandler={this.props.addPartHandler} />)
+                    if(part.t === 0 && last_part_added.o3 === part.o5 && part.n.toLowerCase().includes(this.state.insertFilter.toLowerCase())){
+                        inserts.push(<InsertRender assembly_standard={config.assembly_standard} part={part} addPartHandler={this.addInsertHandler} />)
                     }
                 })
-                inserts_output.push(<div className="aw_part_table">
-                    <TableFilter text={this.state.insertFilter} filterClearHandler={this.filteriInsertClearHandler} filterHandler={this.filteriInsertHandler} />
-                    <table className="table">
-                    <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">OH 5</th>
-                        <th scope="col">OH 3</th>
-                        <th scope="col">Set</th>
-                    </tr>
-                    </thead>
-                    <tbody>{inserts}</tbody>
-                </table>
-                </div>)
+                if(inserts.length)
+                    inserts_output.push(<div className="aw_part_table mb-4">
+                        <TableFilter text={this.state.insertFilter} filterClearHandler={this.filteriInsertClearHandler} filterHandler={this.filteriInsertHandler} />
+                        <div className="aw_table_container">
+                            <table className="table">
+                            <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">OH 5</th>
+                                <th scope="col">OH 3</th>
+                                <th scope="col">Addt </th>
+                            </tr>
+                            </thead>
+                            <tbody>{inserts}</tbody>
+                        </table>
+                        </div>
+                    </div>)
+                else
+                    inserts_output.push(<div className="alert alert-danger">No inserts found</div>)
+
             } else {
                 if(config.complete){
                     inserts_output.push(<div className="alert alert-success">Assembly completed</div>)
                 } else {
-                    inserts_output.push(<div className="alert alert-info">Set a backbone to continue</div>)
+                    inserts_output.push(<div className="alert alert-info">Set a receiver to continue</div>)
                 }
             }
             
@@ -261,14 +272,14 @@ class AssemblyResult extends React.Component {
         const config = this.props.config
         const receiver = config.receiver
 
-        let receiver_output = <div className="alert alert-warning">Choose a receiver</div>
-        let complete_assembly = <div className="alert alert-warning">Add parts to complete the assembly</div>
+        let receiver_output = <div className="alert alert-info">Set a receiver to show the assembly</div>
+        let complete_assembly = <div className="alert alert-info">Add parts to complete the assembly</div>
         let inserts_output = <div className="alert alert-info">No inserts selected</div>
 
         if(receiver) {
             receiver_output = []
             receiver_output.push(<p className="alert alert-primary">Backbone</p>)
-            receiver_output.push(<PartRenderAssembly part={receiver} />)
+            receiver_output.push(<PartRenderAssembly assembly_standard={config.assembly_standard} part={receiver} />)
             if(config.inserts.length){
                 if(config.complete){
                     complete_assembly = <div className="alert alert-success">Assembly completed</div>
@@ -276,7 +287,7 @@ class AssemblyResult extends React.Component {
                 inserts_output = []
                 inserts_output.push(<div className="alert alert-primary">Inserts</div>)
                 config.inserts.forEach((insert) => {
-                    inserts_output.push(<PartRenderAssembly part={insert} />)
+                    inserts_output.push(<PartRenderAssembly assembly_standard={config.assembly_standard} part={insert} />)
                 })
                 inserts_output.push(<p><button type="button" className="btn btn-outline-danger" onClick={this.props.removeLastPartHandler}>Remove last insert</button></p>)
             }
@@ -338,7 +349,7 @@ class PlasmidMap extends React.Component {
                     length += insert.len
                     insert_trackmarkers.push(
                         <trackmarker start={currPos} end={currPos+insert.len} markerstyle={"fill:"+colors[colori]}>
-                            <markerlabel vadjust="50" type="path" labelstyle={"font-size:12px;font-weight:400;fill:"+colors[colori]} text={insert.name}></markerlabel>
+                            <markerlabel vadjust="50" type="path" labelstyle={"font-size:12px;font-weight:400;fill:"+colors[colori]} text={insert.n}></markerlabel>
                         </trackmarker>
                     )
                     colori += 1
@@ -392,7 +403,13 @@ class App extends React.Component {
     }
     setStandardHandler = (event) => {
         this.setState({
-            oh_standard: event.target.value
+            receiver: null,
+            inserts: [],
+            parts: [],
+            complete: false,
+            apiError: '',
+            assembly_standard: event.target.value,
+            enzyme: ''
         })
     }
     setName = (event) => {
@@ -413,15 +430,17 @@ class App extends React.Component {
         let inserts = this.state.inserts
         let newPart = null
         this.state.parts.forEach((part) => {
-            if(part.id === event.target.value){
+            if(part.i === event.target.value){
                 newPart = part
             }
         })
 
-        inserts.push(newPart)
         let complete = false
-        if(this.state.receiver.oh5 === newPart.oh3)
-            complete = true
+        if(newPart){
+            inserts.push(newPart)
+            if(this.state.receiver.o5 === newPart.o3)
+                complete = true
+        }
 
         this.setState({
             inserts: inserts,
@@ -431,7 +450,7 @@ class App extends React.Component {
     setReceiverHandler = (event) => {
         let receiver = null
         this.state.parts.forEach((part) => {
-            if(part.id === event.target.value){
+            if(part.i === event.target.value){
                 receiver = part
             }
         })
@@ -446,118 +465,121 @@ class App extends React.Component {
             inserts: inserts
         })
     }
-    setLevelHandler = (event) => {
-        if(event.target.value !== this.state.level){
+    setEnzymeHandler = (event) => {
+        if(event.target.value !== this.state.enzyme){
             this.setState({
                 receiver: null,
                 inserts: [],
+                parts: [],
                 complete: false,
-                level: event.target.value
+                loading: true,
+                apiError: '',
+                enzyme: event.target.value
+            },() => {
+                this.apiCall()
             })
         }
     }
 
-    componentDidMount(){
+    apiCall(){
         const axios = require('axios');
-        //const url = 'http://192.168.1.64:8000/inventory/api/parts/'
-        const url = '/inventory/api/parts'
+        // const url = 'http://192.168.1.64:8000/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
+        const url = '/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
         axios.get(url)
             .then((response) => {
                 this.setState({
+                    apiError: response.data.error,
                     parts: response.data.parts,
                     next_url: response.data.next_url,
-                    loaded: true
+                    loading: false
                 })
             })
     }
 
     render () {
-        let output = <div className="alert alert-info">
-            <div className="spinner-grow spinner-grow-sm" role="status">
-                <span className="visually-hidden">...</span>
-            </div> Loading parts
-        </div>
-        if(this.state.loaded){
-            let disabled = 'disabled'
-            let next_step_text = "End assembly to continue"
-            if(this.state.complete) {
-                disabled = ''
-                next_step_text = "Next step"
-            }
+        let loading_output = ""
+        if(this.state.loading)
+            loading_output = <div className="alert alert-success">
+                <div className="spinner-grow spinner-grow-sm" role="status">
+                    <span className="visually-hidden">...</span>
+                </div> Loading parts
+            </div>
+        let output = []
+        let disabled = 'disabled'
+        let next_step_text = "End assembly to continue"
+        if(this.state.complete) {
+            disabled = ''
+            next_step_text = "Next step"
+        }
 
-            let get_params = "n=" + this.state.name
-            if(this.state.receiver)
-                get_params += "&b=" + this.state.receiver.id
-            if(this.state.inserts.length) {
-                get_params += "&i="
-                this.state.inserts.forEach((insert) => {
-                    get_params += insert.id + "+"
-                })
-            }
-            let levels_data = [
-                {
-                    value: 'odd'
-                },
-                {
-                    value: 'even'
-                },
-            ]
-            const levels_output = []
-            levels_data.forEach((level_data) => {
-                let active = false
-                if(level_data.value === this.state.level) active = true
-                levels_output.push(<LevelRender name={"Level " + level_data.value} value={level_data.value} active={active} setLevelHandler = {this.setLevelHandler} />)
+        let get_params = "n=" + this.state.name
+        if(this.state.receiver)
+            get_params += "&b=" + this.state.receiver.i
+        if(this.state.inserts.length) {
+            let insert_names = []
+            this.state.inserts.forEach((insert) => {
+                insert_names.push(insert.i)
             })
-            const oh_standards_options = []
-            for(const [key, value] of Object.entries(AssemblyStandards)){
-                let selected = false
-                if(this.state.oh_standard === key) selected = true
-                oh_standards_options.push(<option selected={selected} value={key}>{value.name}</option>)
-            }
-
-            output = <div id="assembly_wizzard-main">
-                    <div className="row">
-                        <div className="col-8">
-                            <div className="row">
-                                <div className="col-4">
-                                    <h2>Name</h2>
-                                    <p><input className="form-control" type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
-                                </div>
-                                <div className="col-4">
-                                    <h3>Level</h3>
-                                    <div>
-                                        <p>{levels_output}</p>
-                                    </div>
-                                </div>
-                                <div className="col-4">
-                                    <h3>OH Standard</h3>
-                                    <div>
-                                        <select onChange={this.setStandardHandler} className="form-select">
-                                            {oh_standards_options}
-                                        </select>
-                                    </div>
+            get_params += "&i=" + insert_names.join("+")
+        }
+        const enzymes_output = []
+        AssemblyStandards[this.state.assembly_standard].enzymes.forEach((enzyme_data) => {
+            let active = false
+            if(enzyme_data.value === this.state.enzyme) active = true
+            enzymes_output.push(<EnzymeRender name={enzyme_data.name} value={enzyme_data.value} active={active} setEnzymeHandler = {this.setEnzymeHandler} />)
+        })
+        const assembly_standards_options = []
+        for(const [key, value] of Object.entries(AssemblyStandards)){
+            let selected = false
+            if(this.state.assembly_standard === key) selected = true
+            assembly_standards_options.push(<option selected={selected} value={key}>{value.name}</option>)
+        }
+        let api_error_output = ""
+        if(this.state.apiError)
+            api_error_output = <div className="alert alert-danger">{this.state.apiError}</div>
+        output = <div id="assembly_wizzard-main">
+                {api_error_output}
+            {this.state.apiError}
+                <div className="row">
+                    <div className="col-8">
+                        <div className="row mb-4">
+                            <div className="col-4">
+                                <h2>Name</h2>
+                                <p><input className="form-control" type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
+                                <h3>Assembly Standard</h3>
+                                <div>
+                                    <select onChange={this.setStandardHandler} className="form-select">
+                                        {assembly_standards_options}
+                                    </select>
                                 </div>
                             </div>
-                            <PartSelector config={this.state} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
+                            <div className="col-8">
+                                <h3>Enzyme</h3>
+                                <div>
+                                    <p>{enzymes_output}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="col-4">
-                            <h2>Next</h2>
-                            <p>
-                                <a href={this.state.next_url + "?" + get_params} className={"aw-button-mr btn btn-outline-primary " + disabled}>{next_step_text}</a>
-                                <a href={this.state.next_url} className="btn btn-outline-secondary">Skip wizzard</a>
-                            </p>
-                            <h2>Assembly</h2>
-                            <AssemblyResult config={this.state} removeLastPartHandler={this.removeLastPartHandler} />
-                        </div>
+                        {loading_output}
+                        <PartSelector config={this.state} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
                     </div>
-                    <div className="row">
-                        <div className="col-12">
-                            <h2>Map</h2>
-                            <PlasmidMap config={this.state} name={this.state.name} />
-                        </div>
+                    <div className="col-4">
+                        <h2>Next</h2>
+                        <p>
+                            <a href={this.state.next_url + "?" + get_params} className={"aw-button-mr btn btn-outline-primary " + disabled}>{next_step_text}</a>
+                            <a href={this.state.next_url} className="btn btn-outline-secondary">Skip wizzard</a>
+                        </p>
+                        <h2>Assembly</h2>
+                        <AssemblyResult config={this.state} removeLastPartHandler={this.removeLastPartHandler} />
                     </div>
                 </div>
-        }
+                <div className="row">
+                    <div className="col-12">
+                        <h2>Map</h2>
+                        <PlasmidMap config={this.state} name={this.state.name} />
+                    </div>
+                </div>
+            </div>
 
         return <div id="assembly_wizzard">
             <div className="container">

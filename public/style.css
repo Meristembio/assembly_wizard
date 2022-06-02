@@ -1,8 +1,8 @@
-.aw_part_table{
+.aw_table_container{
     max-height: 20rem;
     overflow-y: auto;
 }
-.aw_part_table thead {
+.aw_table_container thead {
     position: sticky;
     top: 0;
     z-index: 1;
