@@ -16,19 +16,6 @@ const defaultState = {
         apiError: ''
     }
 
-/*
-Part format
-    {
-        id: '13',
-        name: 'EF-B0015',
-        oh5: 'GCTT',
-        oh3: 'CGCT',
-        enzyme: 0,
-        type: 'i',
-        len: 60
-    }
-*/
-
 function OHRender(ohSeq, assembly_standard) {
     let result = "Custom: " + ohSeq
     const standardOHS = AssemblyStandards[assembly_standard].ohs
@@ -169,17 +156,11 @@ class PartSelector extends React.Component {
             <h2>Receiver</h2>
             <p className="alert alert-info">Set select an enzyme to show options</p>
         </div>
-        if(config.enzyme && config.parts){
+        if(config.enzyme && config.parts && !config.loading){
             let receiver_output = []
             let receivers = []
             receiver_output.push(<h2>Receiver</h2>)
-            /*
-            From intranet
-            TYPES = (
-                (0, 'Part'),
-                (1, 'Receiver'),
-             */
-
+            receiver_output.push(<TableFilter text={this.state.receiverFilter} filterClearHandler={this.filterReceiverClearHandler} filterHandler={this.filterReceiverHandler} />)
             config.parts.forEach((part) => {
                 if(part.t === 1 && part.n.toLowerCase().includes(this.state.receiverFilter.toLowerCase())){
                     let active = false
@@ -189,7 +170,6 @@ class PartSelector extends React.Component {
             })
             if(receivers.length)
                 receiver_output.push(<div className="aw_part_table mb-4">
-                    <TableFilter text={this.state.receiverFilter} filterClearHandler={this.filterReceiverClearHandler} filterHandler={this.filterReceiverHandler} />
                     <div className="aw_table_container">
                         <table className="table">
                         <thead>
@@ -210,11 +190,10 @@ class PartSelector extends React.Component {
             let inserts_output = []
             let inserts = []
             inserts_output.push(<h2>Inserts</h2>)
-            inserts_output.push(<p className="fs-6">Only compatible inserts are listed</p>)
-
-            //console.log(config.parts)
 
             if(config.receiver && !config.complete){
+                inserts_output.push(<p className="alert alert-info fs-6">Only compatible inserts are listed</p>)
+                inserts_output.push(<TableFilter text={this.state.insertFilter} filterClearHandler={this.filteriInsertClearHandler} filterHandler={this.filteriInsertHandler} />)
                 let last_part_added = config.receiver
                 if(config.inserts.length){
                     last_part_added = config.inserts[config.inserts.length - 1]
@@ -226,7 +205,6 @@ class PartSelector extends React.Component {
                 })
                 if(inserts.length)
                     inserts_output.push(<div className="aw_part_table mb-4">
-                        <TableFilter text={this.state.insertFilter} filterClearHandler={this.filteriInsertClearHandler} filterHandler={this.filteriInsertHandler} />
                         <div className="aw_table_container">
                             <table className="table">
                             <thead>
@@ -483,8 +461,8 @@ class App extends React.Component {
 
     apiCall(){
         const axios = require('axios');
-        // const url = 'http://192.168.1.64:8000/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
-        const url = '/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
+        const url = 'http://192.168.1.64:8000/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
+        // const url = '/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
         axios.get(url)
             .then((response) => {
                 this.setState({
