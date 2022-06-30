@@ -1,3 +1,3 @@
-# Assembly wizzard
+# Assembly wizard
 
-React dev for plasmid assembly wizzard. Data is fetch from intranet
+React dev for plasmid assembly wizard. Data is fetch from intranet
