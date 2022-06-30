@@ -1,5 +1,5 @@
 import React from 'react';
-import './assembly_wizzard.css';
+import './assembly_wizard.css';
 import AssemblyStandards from './components/AssemblyStandards';
 import * as ReactDOMServer from 'react-dom/server';
 
@@ -461,8 +461,8 @@ class App extends React.Component {
 
     apiCall(){
         const axios = require('axios');
-        const url = 'http://192.168.1.64:8000/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
-        // const url = '/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
+        // const url = 'http://192.168.1.64:8000/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
+        const url = '/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
         axios.get(url)
             .then((response) => {
                 this.setState({
@@ -515,7 +515,7 @@ class App extends React.Component {
         let api_error_output = ""
         if(this.state.apiError)
             api_error_output = <div className="alert alert-danger">{this.state.apiError}</div>
-        output = <div id="assembly_wizzard-main">
+        output = <div id="assembly_wizard-main">
                 {api_error_output}
             {this.state.apiError}
                 <div className="row">
@@ -545,7 +545,7 @@ class App extends React.Component {
                         <h2>Next</h2>
                         <p>
                             <a href={this.state.next_url + "?" + get_params} className={"aw-button-mr btn btn-outline-primary " + disabled}>{next_step_text}</a>
-                            <a href={this.state.next_url} className="btn btn-outline-secondary">Skip wizzard</a>
+                            <a href={this.state.next_url} className="btn btn-outline-secondary">Skip wizard</a>
                         </p>
                         <h2>Assembly</h2>
                         <AssemblyResult config={this.state} removeLastPartHandler={this.removeLastPartHandler} />
@@ -559,7 +559,7 @@ class App extends React.Component {
                 </div>
             </div>
 
-        return <div id="assembly_wizzard">
+        return <div id="assembly_wizard">
             <div className="container">
                 <div className="row">
                     {output}
