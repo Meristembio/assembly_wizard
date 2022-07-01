@@ -116,12 +116,12 @@ const AssemblyStandards = {
         },
         enzymes: [
             {
-                value: 'BbsI',
-                name: 'BpiI (BbsI)'
+                value: 'BsaI',
+                name: 'L1 (BsaI / Eco31I)'
             },
             {
-                value: 'BsaI',
-                name: 'BsaI (Eco31I)'
+                value: 'BbsI',
+                name: 'L2 (BpiI / BbsI)'
             },
         ]
     },

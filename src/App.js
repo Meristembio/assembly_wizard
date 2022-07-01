@@ -2,6 +2,7 @@ import React from 'react';
 import './assembly_wizard.css';
 import AssemblyStandards from './components/AssemblyStandards';
 import * as ReactDOMServer from 'react-dom/server';
+import $ from 'jquery';
 
 const defaultState = {
         enzyme: null,
@@ -9,7 +10,6 @@ const defaultState = {
         inserts: [],
         complete: false,
         name: '',
-        next_url: '',
         loading: false,
         parts: null,
         assembly_standard: 'loop',
@@ -95,10 +95,10 @@ class ReceiverRender extends React.Component {
 
 class EnzymeRender extends React.Component {
     render() {
-        let button_class = "btn btn-outline-secondary"
-        if(this.props.active) button_class = "btn btn-secondary"
+        let button_class = "btn btn-secondary"
+        if(this.props.active) button_class = "btn btn-primary"
 
-        return <button type="button" className={button_class + " aw-button-mr"} name={"enzyme-" + this.props.value} value={this.props.value} onClick={this.props.setEnzymeHandler}>{this.props.name}</button>
+        return <button type="button" className={button_class + " me-2 mb-2"} name={"enzyme-" + this.props.value} value={this.props.value} onClick={this.props.setEnzymeHandler}>{this.props.name}</button>
     }
 }
 
@@ -152,14 +152,18 @@ class PartSelector extends React.Component {
     }
     render() {
         const config = this.props.config
-        let receiver_parts_output = <div>
-            <h2>Receiver</h2>
-            <p className="alert alert-info">Set select an enzyme to show options</p>
+        let receiver_output = <div>
+            <h3>Receiver</h3>
+            <p className="alert alert-info">Set name and select an enzyme to show options</p>
         </div>
-        if(config.enzyme && config.parts && !config.loading){
-            let receiver_output = []
+        let inserts_output = <div>
+            <h3>Inserts</h3>
+            <p className="alert alert-info">Set a receiver to show options</p>
+        </div>
+        if(config.enzyme && config.name && config.parts && !config.loading){
+            receiver_output = []
             let receivers = []
-            receiver_output.push(<h2>Receiver</h2>)
+            receiver_output.push(<h3>Receiver</h3>)
             receiver_output.push(<TableFilter text={this.state.receiverFilter} filterClearHandler={this.filterReceiverClearHandler} filterHandler={this.filterReceiverHandler} />)
             config.parts.forEach((part) => {
                 if(part.t === 1 && part.n.toLowerCase().includes(this.state.receiverFilter.toLowerCase())){
@@ -170,7 +174,7 @@ class PartSelector extends React.Component {
             })
             if(receivers.length)
                 receiver_output.push(<div className="aw_part_table mb-4">
-                    <div className="aw_table_container">
+                    <div className="alert alert-light">
                         <table className="table">
                         <thead>
                             <tr>
@@ -187,12 +191,11 @@ class PartSelector extends React.Component {
             else
                 receiver_output.push(<div className="alert alert-danger">No receivers found</div>)
 
-            let inserts_output = []
+            inserts_output = []
             let inserts = []
-            inserts_output.push(<h2>Inserts</h2>)
+            inserts_output.push(<h3>Inserts</h3>)
 
             if(config.receiver && !config.complete){
-                inserts_output.push(<p className="alert alert-info fs-6">Only compatible inserts are listed</p>)
                 inserts_output.push(<TableFilter text={this.state.insertFilter} filterClearHandler={this.filteriInsertClearHandler} filterHandler={this.filteriInsertHandler} />)
                 let last_part_added = config.receiver
                 if(config.inserts.length){
@@ -203,45 +206,47 @@ class PartSelector extends React.Component {
                         inserts.push(<InsertRender assembly_standard={config.assembly_standard} part={part} addPartHandler={this.addInsertHandler} />)
                     }
                 })
-                if(inserts.length)
+                if(inserts.length) {
                     inserts_output.push(<div className="aw_part_table mb-4">
-                        <div className="aw_table_container">
+                        <div className="alert alert-light">
                             <table className="table">
-                            <thead>
-                            <tr>
-                                <th scope="col">Name</th>
-                                <th scope="col">OH 5</th>
-                                <th scope="col">OH 3</th>
-                                <th scope="col">Addt </th>
-                            </tr>
-                            </thead>
-                            <tbody>{inserts}</tbody>
-                        </table>
+                                <thead>
+                                <tr>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">OH 5</th>
+                                    <th scope="col">OH 3</th>
+                                    <th scope="col">Addt</th>
+                                </tr>
+                                </thead>
+                                <tbody>{inserts}</tbody>
+                            </table>
+                            <p className="alert alert-info fs-6">Only compatible inserts are listed</p>
                         </div>
                     </div>)
+                }
                 else
                     inserts_output.push(<div className="alert alert-danger">No inserts found</div>)
 
             } else {
                 if(config.complete){
-                    inserts_output.push(<div className="alert alert-success">Assembly completed</div>)
+                    inserts_output.push(<div className="alert alert-success">Assembly complete</div>)
                 } else {
                     inserts_output.push(<div className="alert alert-info">Set a receiver to continue</div>)
                 }
             }
-            
-            receiver_parts_output = <div>
-                <div>
-                    {receiver_output}
-                </div>
-                <div>
-                    {inserts_output}
-                </div>
-            </div>
         }
-        return <div>
-            {receiver_parts_output}
-        </div>
+
+        let receiver_insert_output = []
+        receiver_insert_output.push(<div className="row collapse">
+            {receiver_output}
+            <Pagination step={2} stepHandler={this.props.stepHandler}></Pagination>
+        </div>)
+        receiver_insert_output.push(<div className="row collapse">
+            {inserts_output}
+            <Pagination step={3} stepHandler={this.props.stepHandler}></Pagination>
+        </div>)
+
+        return receiver_insert_output
     }
 }
 
@@ -260,7 +265,7 @@ class AssemblyResult extends React.Component {
             receiver_output.push(<PartRenderAssembly assembly_standard={config.assembly_standard} part={receiver} />)
             if(config.inserts.length){
                 if(config.complete){
-                    complete_assembly = <div className="alert alert-success">Assembly completed</div>
+                    complete_assembly = <div className="alert alert-success">Assembly complete</div>
                 }
                 inserts_output = []
                 inserts_output.push(<div className="alert alert-primary">Inserts</div>)
@@ -374,6 +379,25 @@ class PlasmidMap extends React.Component {
     }
 }
 
+class Pagination extends React.Component {
+    render(){
+        let next_button = ""
+        if(this.props.step < 3)
+            next_button = <button className="btn btn-success float-end" onClick={() => {this.props.stepHandler(this.props.step + 1)}}>Next</button>
+        let prev_button = ""
+        if(this.props.step > 1)
+            prev_button = <button className="btn btn-secondary float-end me-2" onClick={() => {this.props.stepHandler(this.props.step - 1)}}>Prev</button>
+        return <div className="row">
+            <div className="col-9">
+            </div>
+            <div className="col-3">
+                {next_button}
+                {prev_button}
+            </div>
+        </div>
+    }
+}
+
 class App extends React.Component {
     constructor(props) {
         super(props)
@@ -461,17 +485,25 @@ class App extends React.Component {
 
     apiCall(){
         const axios = require('axios');
-        // const url = 'http://192.168.1.64:8000/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
-        const url = '/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
+        const url = 'http://192.168.1.64:8000/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
+        // const url = '/inventory/api/parts/' + this.state.enzyme + '/' + this.state.assembly_standard + '/'
         axios.get(url)
             .then((response) => {
                 this.setState({
                     apiError: response.data.error,
                     parts: response.data.parts,
-                    next_url: response.data.next_url,
                     loading: false
                 })
             })
+    }
+
+    stepHandler(step){
+        $('#steps').children().removeClass('show')
+        $('#steps > *:nth-child(' + (step) + ')').addClass('show')
+        $('#pagination').children().removeClass('active')
+        $('#pagination > *:nth-child(' + (step) + ')').addClass('active')
+        $('#pagination a span:first-child').removeClass('bg-light').removeClass('text-primary').addClass('bg-primary')
+        $('#pagination > *:nth-child(' + (step) + ') a span:first-child').addClass('bg-light').addClass('text-primary')
     }
 
     render () {
@@ -520,41 +552,55 @@ class App extends React.Component {
             {this.state.apiError}
                 <div className="row">
                     <div className="col-8">
-                        <div className="row mb-4">
-                            <div className="col-4">
-                                <h2>Name</h2>
-                                <p><input className="form-control" type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
-                                <h3>Assembly Standard</h3>
-                                <div>
-                                    <select onChange={this.setStandardHandler} className="form-select">
-                                        {assembly_standards_options}
-                                    </select>
+                        <h2>Setup</h2>
+                        <nav aria-label="Page navigation">
+                            <ul id="pagination" className="pagination">
+                                <li className="page-item active" onClick={() => {this.stepHandler(1)}}><a className="page-link" href="#"><span
+                                    className="badge bg-light text-primary">Step 1</span><span className="ms-1">Name & enzyme</span></a></li>
+                                <li className="page-item" onClick={() => {this.stepHandler(2)}}><a className="page-link" href="#"><span
+                                    className="badge bg-primary">Step 2</span><span className="ms-1">Receiver</span></a></li>
+                                <li className="page-item" onClick={() => {this.stepHandler(3)}}><a className="page-link" href="#"><span
+                                    className="badge bg-primary">Step 3</span><span className="ms-1">Inserts</span></a></li>
+                            </ul>
+                        </nav>
+                        <div id="steps" className="border alert alert-secondary mb-4">
+                            <div className="collapse show">
+                                <div className="row">
+                                    <div className="col-4">
+                                        <h3>Name</h3>
+                                        <p><input className="form-control" type="text" placeholder="Plasmid name" onChange={this.setName} /></p>
+                                    </div>
+                                    <div className="col-4">
+                                        <h3>Assembly Standard</h3>
+                                        <div>
+                                            <select onChange={this.setStandardHandler} className="form-select">
+                                                {assembly_standards_options}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="col-4">
+                                        <h3>Level / Enzyme</h3>
+                                        <div>
+                                            <p>{enzymes_output}</p>
+                                        </div>
+                                    </div>
+                                    <Pagination step={1} stepHandler={this.stepHandler}></Pagination>
                                 </div>
                             </div>
-                            <div className="col-8">
-                                <h3>Enzyme</h3>
-                                <div>
-                                    <p>{enzymes_output}</p>
-                                </div>
-                            </div>
+                            <PartSelector stepHandler={this.stepHandler} config={this.state} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
                         </div>
                         {loading_output}
-                        <PartSelector config={this.state} setReceiverHandler={this.setReceiverHandler} addPartHandler={this.addPartHandler} />
+                        <h2>Map</h2>
+                        <PlasmidMap config={this.state} name={this.state.name} />
                     </div>
                     <div className="col-4">
                         <h2>Next</h2>
                         <p>
-                            <a href={this.state.next_url + "?" + get_params} className={"aw-button-mr btn btn-outline-primary " + disabled}>{next_step_text}</a>
-                            <a href={this.state.next_url} className="btn btn-outline-secondary">Skip wizard</a>
+                            <a href={window.next_url + "?" + get_params} className={"me-2 btn btn-outline-primary " + disabled}>{next_step_text}</a>
+                            <a href={window.next_url} className="btn btn-outline-secondary">Skip wizard</a>
                         </p>
                         <h2>Assembly</h2>
                         <AssemblyResult config={this.state} removeLastPartHandler={this.removeLastPartHandler} />
-                    </div>
-                </div>
-                <div className="row">
-                    <div className="col-12">
-                        <h2>Map</h2>
-                        <PlasmidMap config={this.state} name={this.state.name} />
                     </div>
                 </div>
             </div>
