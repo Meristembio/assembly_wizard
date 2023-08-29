@@ -1,3 +1,3 @@
 # Assembly wizard
 
-React dev for plasmid assembly wizard. Data is fetch from intranet
+[https://github.com/Meristembio/Weaver](Weaver) React module for plasmid assembly wizard.
