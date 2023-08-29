@@ -1,3 +1,3 @@
 # Assembly wizard
 
-[https://github.com/Meristembio/Weaver](Weaver) React module for plasmid assembly wizard.
+[Weaver](https://github.com/Meristembio/Weaver) React module for plasmid assembly wizard.
