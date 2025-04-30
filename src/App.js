@@ -12,7 +12,7 @@ const defaultState = {
     name: '',
     loading: false,
     parts: null,
-    assembly_standard: 'loop',
+    assembly_standard: 'ytk',
     apiError: '',
     receiverFilter: '',
     insertFilter: '',
@@ -117,7 +117,7 @@ class AssemblyResult extends React.Component {
         const config = this.props.config
         const receiver = config.receiver
 
-        let receiver_output = <div className="alert alert-info">Set a receiver to show the assembly</div>
+        let receiver_output = <div className="alert alert-info">No receiver selected</div>
         let complete_assembly = <div className="alert alert-info">Add parts to complete the assembly</div>
         let inserts_output = <div className="alert alert-info">No inserts selected</div>
 
@@ -125,38 +125,35 @@ class AssemblyResult extends React.Component {
             receiver_output = []
             receiver_output.push(<p className="alert alert-primary">Backbone</p>)
             receiver_output.push(<PartRenderAssembly assembly_standard={config.assembly_standard} part={receiver}/>)
-            if (config.inserts.length) {
-                if (config.complete) {
-                    complete_assembly = <div className="alert alert-success">
-                        <div className="row">
-                            <div className="col-12">
-                                <span className={"d-inline-block"}>Assembly complete</span>
-                                <button type="submit" form="form-wizard" value="Submit"
-                                        className={"float-end md-2 btn btn-primary " + this.props.next_disabled}>{this.props.next_text}<i
-                className="bi bi-arrow-right-circle ms-2"></i>  </button>
-                            </div>
+        }
+        if (config.inserts.length) {
+            if (config.complete) {
+                complete_assembly = <div className="alert alert-success">
+                    <div className="row">
+                        <div className="col-12">
+                            <span className={"d-inline-block"}>Assembly complete</span>
+                            <button type="submit" form="form-wizard" value="Submit"
+                                    className={"float-end md-2 btn btn-primary " + this.props.next_disabled}>{this.props.next_text}<i
+            className="bi bi-arrow-right-circle ms-2"></i>  </button>
                         </div>
                     </div>
-                }
-                inserts_output = []
-                inserts_output.push(
-                    <div className="alert alert-primary">Inserts</div>
-                )
-                config.inserts.forEach((insert) => {
-                    inserts_output.push(<PartRenderAssembly assembly_standard={config.assembly_standard}
-                                                            part={insert}/>)
-                })
-                inserts_output.push(
-                    <p>
-                        <button type="button" className="btn btn-outline-danger"
-                                onClick={this.props.removeLastPartHandler}>Remove last insert
-                        </button>
-                    </p>
-                )
+                </div>
             }
-        } else {
-            complete_assembly = ""
-            inserts_output = ""
+            inserts_output = []
+            inserts_output.push(
+                <div className="alert alert-primary">Inserts</div>
+            )
+            config.inserts.forEach((insert) => {
+                inserts_output.push(<PartRenderAssembly assembly_standard={config.assembly_standard}
+                                                        part={insert}/>)
+            })
+            inserts_output.push(
+                <p>
+                    <button type="button" className="btn btn-outline-danger"
+                            onClick={this.props.removeLastPartHandler}>Remove last insert
+                    </button>
+                </p>
+            )
         }
 
         return <div>
@@ -374,8 +371,15 @@ class App extends React.Component {
         let complete = false
         if (newPart) {
             inserts.push(newPart)
-            if (this.state.receiver.o5 === newPart.o3)
-                complete = true
+            if(this.state.receiver){
+                if (this.state.receiver.o5 === newPart.o3)
+                    complete = true
+            } else {
+                console.log(inserts[0]);
+                console.log(newPart);
+                if (inserts[0].o5 === newPart.o3)
+                    complete = true
+            }
         }
 
         this.setState({
@@ -539,16 +543,23 @@ class App extends React.Component {
             let inserts = []
             inserts_output.push(<h3>Inserts</h3>)
 
-            if (this.state.receiver && !this.state.complete) {
+            if (!this.state.complete) {
                 inserts_output.push(<TableFilter text={this.state.insertFilter}
                                                  filterClearHandler={this.filteriInsertClearHandler}
                                                  filterHandler={this.filteriInsertHandler}/>)
-                let last_part_added = this.state.receiver
+                let last_part_added = null
+                if(this.state.receiver)
+                    last_part_added = this.state.receiver
                 if (this.state.inserts.length) {
                     last_part_added = this.state.inserts[this.state.inserts.length - 1]
                 }
                 this.state.parts.forEach((part) => {
-                    if (part.t === 0 && last_part_added.o3 === part.o5 && part.n.toLowerCase().includes(this.state.insertFilter.toLowerCase())) {
+                    if (part.t === 0 && part.n.toLowerCase().includes(this.state.insertFilter.toLowerCase())) {
+                        if(last_part_added){
+                            if(last_part_added.o3 !== part.o5){
+                                return;
+                            }
+                        }
                         inserts.push(<PartRender assembly_standard={this.state.assembly_standard} part={part}
                                                  button_text="Add"
                                                  partHandler={this.addInsertHandler}/>)
@@ -575,11 +586,7 @@ class App extends React.Component {
                     inserts_output.push(<div className="alert alert-danger">No inserts found</div>)
 
             } else {
-                if (this.state.complete) {
-                    inserts_output.push(<div className="alert alert-success">Assembly complete</div>)
-                } else {
-                    inserts_output.push(<div className="alert alert-info">Set a receiver to continue</div>)
-                }
+                inserts_output.push(<div className="alert alert-success">Assembly complete</div>)
             }
         }
 

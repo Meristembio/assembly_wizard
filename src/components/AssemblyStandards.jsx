@@ -1,4 +1,92 @@
 const AssemblyStandards = {
+    "ytk": {
+        name:"YTK",
+        ohs: {
+                '81': {
+                    'name': '8-1',
+                    'oh': 'CCCT'
+                },
+                '12': {
+                    'name': '1-2',
+                    'oh': 'AACG'
+                },
+                '23': {
+                    'name': '2-3',
+                    'oh': 'TATG'
+                },
+                '3a3b': {
+                    'name': '3a-3b',
+                    'oh': 'TTCT',
+                    'prev_bases': 'gg'
+                },
+                '34': {
+                    'name': '3-4',
+                    'oh': 'ATCC'
+                },
+                '4a4b': {
+                    'name': '4a-4b',
+                    'oh': 'TGGC'
+                },
+                '45': {
+                    'name': '4-5',
+                    'oh': 'GCTG'
+                },
+                '56': {
+                    'name': '5-6',
+                    'oh': 'TACA'
+                },
+                '67': {
+                    'name': '6-7',
+                    'oh': 'GAGT'
+                },
+                '78': {
+                    'name': '7-8',
+                    'oh': 'CCGA'
+                },
+                '8a8b': {
+                    'name': '8a-8b',
+                    'oh': 'CAAT'
+                },
+                'S': {
+                    'name': 'S',
+                    'oh': 'CTGA'
+                },
+                '1': {
+                    'name': '1',
+                    'oh': 'CCAA'
+                },
+                '2': {
+                    'name': '2',
+                    'oh': 'GATG'
+                },
+                '3': {
+                    'name': '3',
+                    'oh': 'GTTC'
+                },
+                '4': {
+                    'name': '4',
+                    'oh': 'GGTA'
+                },
+                '5': {
+                    'name': '5',
+                    'oh': 'AAGT'
+                },
+                'E': {
+                    'name': 'E',
+                    'oh': 'AGCA'
+                },
+        },
+        enzymes: [
+            {
+                value: 'BsaI',
+                name: 'L1 (BsaI)'
+            },
+            {
+                value: 'BsmBI',
+                name: 'L2 (BsmBI)'
+            },
+        ]
+    },
     "loop": {
         name:"Loop Assembly",
         ohs: {
